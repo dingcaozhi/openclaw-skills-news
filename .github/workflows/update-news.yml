@@ -1,0 +1,126 @@
+name: Update News Data
+
+on:
+  schedule:
+    # 每2天运行一次 (UTC 时间 08:00)
+    - cron: '0 8 */2 * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Fetch News from Exa API
+      env:
+        EXA_API_KEY: ${{ secrets.EXA_API_KEY }}
+      run: |
+        cat > update-news.js << 'SCRIPT'
+        const fs = require('fs');
+        
+        async function fetchNews() {
+          const queries = [
+            "openclaw agent skills",
+            "openclaw automation tools",
+            "AI agent frameworks 2024 2025",
+            "clawhub skills marketplace"
+          ];
+          
+          const allResults = [];
+          
+          for (const query of queries) {
+            try {
+              const response = await fetch('https://api.exa.ai/search', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-api-key': process.env.EXA_API_KEY
+                },
+                body: JSON.stringify({
+                  query: query,
+                  numResults: 5,
+                  type: 'keyword',
+                  contents: { text: true }
+                })
+              });
+              
+              const data = await response.json();
+              if (data.results) {
+                allResults.push(...data.results);
+              }
+            } catch (e) {
+              console.error(`Error fetching ${query}:`, e.message);
+            }
+          }
+          
+          // 去重并格式化
+          const seen = new Set();
+          const articles = [];
+          
+          for (const item of allResults) {
+            if (seen.has(item.url)) continue;
+            seen.add(item.url);
+            
+            let summary = item.text || '';
+            if (summary.length > 250) {
+              summary = summary.substring(0, 250) + '...';
+            }
+            
+            const title = item.title || '';
+            const text = (item.text || '').toLowerCase();
+            
+            let category = 'AI';
+            if (title.includes('OpenClaw') || text.includes('openclaw')) category = 'OpenClaw';
+            else if (title.includes('Skill') || text.includes('skill')) category = 'Skills';
+            else if (title.includes('Agent') || text.includes('agent')) category = 'Agent';
+            else if (title.includes('Tool') || text.includes('tool')) category = 'Tools';
+            else if (title.includes('Framework') || text.includes('framework')) category = 'Framework';
+            
+            articles.push({
+              id: item.id || `news_${Date.now()}_${Math.random()}`,
+              title: title,
+              summary: summary,
+              source: item.source || new URL(item.url).hostname.replace('www.', ''),
+              date: new Date().toISOString().split('T')[0],
+              category: category,
+              url: item.url
+            });
+          }
+          
+          const output = {
+            lastUpdated: new Date().toISOString().split('T')[0],
+            totalCount: articles.length,
+            news: articles.slice(0, 20)
+          };
+          
+          fs.writeFileSync('dist/news.json', JSON.stringify(output, null, 2));
+          console.log(`✅ 成功更新 ${articles.length} 条新闻`);
+        }
+        
+        fetchNews().catch(console.error);
+        SCRIPT
+        
+        node update-news.js
+    
+    - name: Commit and Push
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add dist/news.json
+        git diff --staged --quiet || (git commit -m "Update news data: $(date +%Y-%m-%d)" && git push)
+    
+    - name: Trigger Netlify Deploy
+      env:
+        NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+      run: |
+        if [ -n "$NETLIFY_BUILD_HOOK" ]; then
+          curl -X POST "$NETLIFY_BUILD_HOOK"
+          echo "✅ Netlify 重新部署已触发"
+        fi

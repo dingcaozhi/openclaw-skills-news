@@ -1,6 +1,25 @@
+# 纯静态网站配置 - 无需构建
 [build]
-  command = "npm run build"
+  # 直接发布 dist 目录，不需要构建命令
   publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "20"
+# 缓存静态资源
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    # 缓存控制 - 静态资源缓存1小时
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "*.json"
+  [headers.values]
+    # JSON 数据缓存5分钟（因为会更新）
+    Cache-Control = "public, max-age=300"
+
+# 重定向规则
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
