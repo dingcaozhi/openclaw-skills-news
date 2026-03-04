@@ -1,0 +1,117 @@
+---
+import Layout from '../layouts/Layout.astro';
+import NewsCard from '../components/NewsCard.astro';
+import newsData from '../data/news.json';
+
+const { news, lastUpdated } = newsData;
+
+// 按分类分组
+const categories = [...new Set(news.map(item => item.category))];
+---
+
+<Layout title="OpenClaw Agent Skills - 智能新闻聚合">
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-br from-indigo-50 to-blue-50 py-16">
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+        OpenClaw Agent Skills
+      </h2>
+      <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
+        🤖 AI Agent 自动聚合的 OpenClaw 技能与工具最新资讯
+      </p>
+      <div class="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
+        <span class="bg-white px-4 py-2 rounded-full shadow-sm">🔄 每2天自动更新</span>
+        <span class="bg-white px-4 py-2 rounded-full shadow-sm">📡 多源聚合</span>
+        <span class="bg-white px-4 py-2 rounded-full shadow-sm">🔄 最后更新: {lastUpdated}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Category Filter -->
+  <section class="py-8 bg-white border-b sticky top-0 z-10 shadow-sm">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-wrap justify-center gap-2">
+        <button class="category-btn active px-4 py-2 rounded-full text-sm font-medium bg-indigo-600 text-white transition" data-category="all">
+          全部
+        </button>
+        {categories.map(cat => (
+          <button class="category-btn px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition" data-category={cat}>
+            {cat}
+          </button>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- News Grid -->
+  <section id="news" class="py-12">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between mb-8">
+        <h3 class="text-2xl font-bold text-gray-900">最新动态</h3>
+        <span class="text-gray-500 text-sm">共 {news.length} 条</span>
+      </div>
+      
+      <div id="news-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {news.map(item => (
+          <div class="news-item" data-category={item.category}>
+            <NewsCard {...item} />
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="py-16 bg-gray-100">
+    <div class="container mx-auto px-4 max-w-3xl text-center">
+      <h3 class="text-2xl font-bold text-gray-900 mb-4">关于本项目</h3>
+      <p class="text-gray-600 mb-6">
+        OpenClaw Agent Skills News 是一个由 AI Agent 驱动的自动化新闻聚合平台。
+        我们使用智能代理技术，实时追踪并整理来自 OpenClaw 生态系统、AI Agent 
+        框架和技能市场的最新资讯，帮助开发者快速了解 AI 自动化领域的前沿动态。
+      </p>
+      <div class="flex justify-center gap-8 text-sm text-gray-500">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🤖</span>
+          <span>AI 自动抓取</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">⚡</span>
+          <span>每2天更新</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📱</span>
+          <span>移动优先</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // 分类筛选功能
+    const categoryBtns = document.querySelectorAll('.category-btn');
+    const newsItems = document.querySelectorAll('.news-item');
+
+    categoryBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // 更新按钮状态
+        categoryBtns.forEach(b => {
+          b.classList.remove('bg-indigo-600', 'text-white');
+          b.classList.add('bg-gray-100', 'text-gray-700');
+        });
+        btn.classList.remove('bg-gray-100', 'text-gray-700');
+        btn.classList.add('bg-indigo-600', 'text-white');
+
+        // 筛选新闻
+        const category = btn.dataset.category;
+        newsItems.forEach(item => {
+          if (category === 'all' || item.dataset.category === category) {
+            item.style.display = 'block';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    });
+  </script>
+</Layout>
